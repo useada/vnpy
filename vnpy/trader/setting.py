@@ -10,7 +10,7 @@ from .utility import load_json
 
 
 SETTINGS: Dict[str, Any] = {
-    "font.family": "微软雅黑",
+    "font.family": "Monaco",
     "font.size": 12,
 
     "log.active": True,
@@ -25,7 +25,7 @@ SETTINGS: Dict[str, Any] = {
     "email.sender": "",
     "email.receiver": "",
 
-    "datafeed.name": "",
+    "datafeed.name": "ib",
     "datafeed.username": "",
     "datafeed.password": "",
 

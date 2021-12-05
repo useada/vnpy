@@ -5,13 +5,14 @@ from vnpy.trader.ui import MainWindow, create_qapp
 # from vnpy.gateway.ctp import CtpGateway
 # from vnpy_ctptest import CtptestGateway
 # from vnpy.gateway.ib import IbGateway
-from vnpy.plugin.ib import IbGateway
+from vnpy.plugin.vnpy_ib import IbGateway
 
 # from vnpy.app.paper_account import PaperAccountApp
 # from vnpy.app.cta_strategy import CtaStrategyApp
 # from vnpy.app.cta_backtester import CtaBacktesterApp
 
-from vnpy.app.data_manager import DataManagerApp
+# from vnpy.app.data_manager import DataManagerApp
+from vnpy.plugin.vnpy_ib import DataManagerApp
 
 
 def main():

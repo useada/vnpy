@@ -45,8 +45,8 @@ def get_datafeed() -> BaseDatafeed:
 
     # 特殊处理盈透数据
     if datafeed_name == "ib":
-        from vnpy.plugin.ib import IbDatafeed
-        datafeed = IbDatafeed()
+        from vnpy.plugin.vnpy_ib import Datafeed
+        datafeed = Datafeed()
         return datafeed
 
     module_name: str = f"vnpy_{datafeed_name}"

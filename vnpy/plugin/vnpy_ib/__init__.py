@@ -5,7 +5,7 @@ import importlib_metadata
 
 from .vnpy_gateway.ib_gateway import IbGateway
 from .vnpy_datafeed.ib_datafeed import IbDatafeed as Datafeed
-from .vnpy_datamanager import DataManagerApp
+from .vnpy_datamanager import DataManagerApp, ui
 
 
 # from .ib_gateway import IbGateway

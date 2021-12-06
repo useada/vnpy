@@ -42,14 +42,8 @@ def get_datafeed() -> BaseDatafeed:
 
     # Read datafeed related global setting
     datafeed_name: str = SETTINGS["datafeed.name"]
-
-    # 特殊处理盈透数据
-    if datafeed_name == "ib":
-        from vnpy.plugin.vnpy_ib import Datafeed
-        datafeed = Datafeed()
-        return datafeed
-
     module_name: str = f"vnpy_{datafeed_name}"
+
 
     # Try to import datafeed module
     try:

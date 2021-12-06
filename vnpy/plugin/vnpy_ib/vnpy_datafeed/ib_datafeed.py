@@ -116,6 +116,7 @@ class IbDatafeed(BaseDatafeed):
         self.username: str = SETTINGS["datafeed.username"]
         self.password: str = SETTINGS["datafeed.password"]
 
+        self.ib = IB()
         self.inited: bool = False
 
     def init(self) -> bool:
@@ -123,7 +124,6 @@ class IbDatafeed(BaseDatafeed):
         if self.inited:
             return True
 
-        self.ib = IB()
         self.ib.connect('127.0.0.1', 7496, clientId=1)
 
         self.inited = True
@@ -220,137 +220,19 @@ class IbDatafeed(BaseDatafeed):
 
         return data
 
+    def match_symbol(self, symbol) -> Optional[List[str]]:
+        if not self.inited:
+            self.init()
 
-        # ib_contract: Contract = generate_ib_contract(req.symbol, req.exchange)
+        matches = self.ib.reqMatchingSymbols(symbol)
+        match_contracts = [str(m.contract) for m in matches]
+        return match_contracts
 
-        # if req.end:
-        #     end: datetime = req.end
-        #     end_str: str = end.strftime("%Y%m%d %H:%M:%S")
-        # else:
-        #     end: datetime = datetime.now(self.local_tz)
-        #     end_str: str = ""
-
-        # delta: timedelta = end - req.start
-        # days: int = min(delta.days, 180)     # IB 只提供6个月数据
-        # duration: str = f"{days} D"
-        # bar_size: str = INTERVAL_VT2IB[req.interval]
-
-        # if req.exchange == Exchange.IDEALPRO:
-        #     bar_type: str = "MIDPOINT"
-        # else:
-        #     bar_type: str = "TRADES"
-
-        # self.history_reqid = self.reqid
-        # self.client.reqHistoricalData(
-        #     self.reqid,
-        #     ib_contract,
-        #     end_str,
-        #     duration,
-        #     bar_size,
-        #     bar_type,
-        #     0,
-        #     1,
-        #     False,
-        #     []
-        # )
-
-        # self.history_condition.acquire()    # 等待异步数据返回
-        # self.history_condition.wait()
-        # self.history_condition.release()
-
-        # history: List[BarData] = self.history_buf
-        # self.history_buf: List[BarData] = []       # 创新新的缓冲列表
-        # self.history_req: HistoryRequest = None
-
-        # return history
-
-
-        # ts_symbol = to_ts_symbol(symbol, exchange)
-        # if not ts_symbol:
-        #     return None
-
-        # asset = to_ts_asset(symbol, exchange)
-        # if not asset:
-        #     return None
-
-        # ts_interval = INTERVAL_VT2TS.get(interval)
-        # if not ts_interval:
-        #     return None
-
-        # adjustment = INTERVAL_ADJUSTMENT_MAP[interval]
-
-        # d1 = ts.pro_bar(
-        #     ts_code=ts_symbol,
-        #     start_date=start,
-        #     end_date=end,
-        #     asset=asset,
-        #     freq=ts_interval
-        # )
-        # df = deepcopy(d1)
-
-        # while True:
-        #     if len(d1) != 8000:
-        #         break
-        #     tmp_end = d1["trade_time"].values[-1]
-
-        #     d1 = ts.pro_bar(
-        #         ts_code=ts_symbol,
-        #         start_date=start,
-        #         end_date=tmp_end,
-        #         asset=asset,
-        #         freq=ts_interval
-        #     )
-        #     df = pd.concat([df[:-1], d1])
-
-        # bar_keys: List[datetime] = []
-        # bar_dict: Dict[datetime, BarData] = {}
-        # data: List[BarData] = []
-
-        # # 处理原始数据中的NaN值
-        # df.fillna(0, inplace=True)
-
-        # if df is not None:
-        #     for ix, row in df.iterrows():
-        #         if row["open"] is None:
-        #             continue
-
-        #         if interval.value == "d":
-        #             dt = row["trade_date"]
-        #             dt = datetime.strptime(dt, "%Y%m%d")
-        #         else:
-        #             dt = row["trade_time"]
-        #             dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") - adjustment
-
-        #         dt = CHINA_TZ.localize(dt)
-
-        #         bar: BarData = BarData(
-        #             symbol=symbol,
-        #             exchange=exchange,
-        #             interval=interval,
-        #             datetime=dt,
-        #             open_price=round_to(row["open"], 0.000001),
-        #             high_price=round_to(row["high"], 0.000001),
-        #             low_price=round_to(row["low"], 0.000001),
-        #             close_price=round_to(row["close"], 0.000001),
-        #             volume=row["vol"],
-        #             turnover=row.get("amount", 0),
-        #             open_interest=row.get("oi", 0),
-        #             gateway_name="TS"
-        #         )
-
-        #         bar_dict[dt] = bar
-
-        # bar_keys = bar_dict.keys()
-        # bar_keys = sorted(bar_keys, reverse=False)
-        # for i in bar_keys:
-        #     data.append(bar_dict[i])
-
-        # return data
 
 if __name__ == '__main__':
-    datafeed = IbDatafeed2()
+    datafeed = IbDatafeed()
     datafeed.init()
     start = _datetime.strptime('2021/02/04 00:00', '%Y/%m/%d %H:%M')
     req = HistoryRequest(symbol="JD", exchange=Exchange.NASDAQ,
-        start=start, interval=Interval.DAILY)
-    print (datafeed.query_bar_history(req))
+                         start=start, interval=Interval.DAILY)
+    print(datafeed.query_bar_history(req))

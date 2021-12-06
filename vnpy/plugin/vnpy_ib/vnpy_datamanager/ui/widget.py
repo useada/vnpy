@@ -395,7 +395,7 @@ class ManagerWidget(QtWidgets.QWidget):
 
     def download_data(self) -> None:
         """"""
-        dialog = DownloadDialog(self.engine)
+        dialog = DownloadDialog2(self.engine)
         dialog.exec_()
 
     def show(self) -> None:
@@ -608,3 +608,132 @@ class DownloadDialog(QtWidgets.QDialog):
         else:
             count = self.engine.download_bar_data(symbol, exchange, interval, start)
         QtWidgets.QMessageBox.information(self, "下载结束", f"下载总数据量：{count}条")
+
+
+class DownloadDialog2(QtWidgets.QDialog):
+    """"""
+
+    def __init__(self, engine: ManagerEngine, parent=None):
+        """"""
+        super().__init__()
+
+        self.engine = engine
+
+        self.setWindowTitle("下载历史数据V2")
+        self.setFixedWidth(300)
+
+        self.setWindowFlags(
+            (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
+            & ~QtCore.Qt.WindowMaximizeButtonHint)
+
+        self.symbol_edit = QtWidgets.QLineEdit()
+
+        # self.exchange_combo = QtWidgets.QComboBox()
+        # for i in Exchange:
+        #     self.exchange_combo.addItem(str(i.name), i)
+
+        self.interval_combo = QtWidgets.QComboBox()
+        for i in Interval:
+            self.interval_combo.addItem(str(i.name), i)
+        self.interval_combo.setFixedWidth(120)
+
+        now = datetime.now()
+        end_dt = now
+        start_dt = now - timedelta(days=30)
+
+        self.start_date_edit = QtWidgets.QDateEdit(
+            QtCore.QDate(
+                start_dt.year,
+                start_dt.month,
+                start_dt.day
+            )
+        )
+        self.end_date_edit = QtWidgets.QDateEdit(
+            QtCore.QDate(
+                end_dt.year,
+                end_dt.month,
+                end_dt.day
+            )
+        )
+
+        button_select = QtWidgets.QPushButton("搜索合约")
+        button_select.clicked.connect(self.select_dialog)
+
+        button = QtWidgets.QPushButton("下载")
+        button.clicked.connect(self.download)
+
+        form = QtWidgets.QFormLayout()
+
+        form.addRow("代码", self.symbol_edit)
+        form.addRow(button_select)
+
+        form.addRow("周期", self.interval_combo)
+        form.addRow("开始日期", self.start_date_edit)
+        form.addRow("结束日期", self.end_date_edit)
+        form.addRow(button)
+
+        self.setLayout(form)
+
+    def download(self):
+        """"""
+        symbol = self.symbol_edit.text()
+        exchange = Exchange(self.exchange_combo.currentData())
+        interval = Interval(self.interval_combo.currentData())
+
+        start_date = self.start_date_edit.date()
+        start = datetime(start_date.year(), start_date.month(), start_date.day())
+        start = DB_TZ.localize(start)
+
+        if interval == Interval.TICK:
+            count = self.engine.download_tick_data(symbol, exchange, start)
+        else:
+            count = self.engine.download_bar_data(symbol, exchange, interval, start)
+        QtWidgets.QMessageBox.information(self, "下载结束", f"下载总数据量：{count}条")
+
+    def select_dialog(self) -> None:
+        """"""
+        symbol = self.symbol_edit.text()
+        if symbol == "":
+            QtWidgets.QMessageBox.information(self, "提示", "代码不能为空")
+            return
+
+        dialog = SelectDialog(self.engine, parent=self, symbol=symbol)
+        dialog.exec_()
+
+    def select_contract(self, item) -> None:
+        """"""
+        print("item=", item.text())
+
+
+class SelectDialog(QtWidgets.QDialog):
+    """"""
+
+    def __init__(self, engine: ManagerEngine, parent=None, symbol=""):
+        """"""
+        super().__init__()
+
+        self.engine = engine
+
+        self.setWindowTitle("合约选择")
+        self.setFixedWidth(900)
+
+        self.setWindowFlags(
+            (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
+            & ~QtCore.Qt.WindowMaximizeButtonHint)
+
+        self.list_widget = QtWidgets.QListWidget()
+
+        match_contracts = engine.datafeed.match_symbol(symbol)
+        for mc in match_contracts:
+            self.list_widget.addItem(mc)
+
+        self.list_widget.itemClicked.connect(parent.select_contract)
+
+        button = QtWidgets.QPushButton("选择")
+        button.clicked.connect(self.close)
+
+        form = QtWidgets.QFormLayout()
+        form.addRow(self.list_widget)
+        form.addRow(button)
+
+        self.setLayout(form)

@@ -61,6 +61,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.trading_widget, trading_dock = self.create_dock(
             TradingWidget, "交易", QtCore.Qt.LeftDockWidgetArea
         )
+        log_widget, log_dock = self.create_dock(
+            LogMonitor, "日志", QtCore.Qt.LeftDockWidgetArea
+        )
+
         tick_widget, tick_dock = self.create_dock(
             TickMonitor, "行情", QtCore.Qt.RightDockWidgetArea
         )
@@ -73,17 +77,16 @@ class MainWindow(QtWidgets.QMainWindow):
         trade_widget, trade_dock = self.create_dock(
             TradeMonitor, "成交", QtCore.Qt.RightDockWidgetArea
         )
-        log_widget, log_dock = self.create_dock(
-            LogMonitor, "日志", QtCore.Qt.BottomDockWidgetArea
-        )
         account_widget, account_dock = self.create_dock(
-            AccountMonitor, "资金", QtCore.Qt.BottomDockWidgetArea
+            AccountMonitor, "资金", QtCore.Qt.RightDockWidgetArea
         )
         position_widget, position_dock = self.create_dock(
-            PositionMonitor, "持仓", QtCore.Qt.BottomDockWidgetArea
+            PositionMonitor, "持仓", QtCore.Qt.RightDockWidgetArea
         )
 
         self.tabifyDockWidget(active_dock, order_dock)
+        self.tabifyDockWidget(trade_dock, account_dock)
+        self.tabifyDockWidget(account_dock, position_dock)
 
         self.save_window_setting("default")
 

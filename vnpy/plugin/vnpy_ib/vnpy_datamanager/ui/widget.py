@@ -252,12 +252,12 @@ class ManagerWidget(QtWidgets.QWidget):
         QtWidgets.QMessageBox.information(self, "载入成功！", msg)
 
     def output_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval,
-        start: datetime,
-        end: datetime
+            self,
+            symbol: str,
+            exchange: Exchange,
+            interval: Interval,
+            start: datetime,
+            end: datetime
     ) -> None:
         """"""
         # Get output date range
@@ -294,12 +294,12 @@ class ManagerWidget(QtWidgets.QWidget):
             )
 
     def show_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval,
-        start: datetime,
-        end: datetime
+            self,
+            symbol: str,
+            exchange: Exchange,
+            interval: Interval,
+            start: datetime,
+            end: datetime
     ) -> None:
         """"""
         # Get output date range
@@ -331,10 +331,10 @@ class ManagerWidget(QtWidgets.QWidget):
             self.table.setItem(row, 7, DataCell(str(bar.open_interest)))
 
     def delete_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval
+            self,
+            symbol: str,
+            exchange: Exchange,
+            interval: Interval
     ) -> None:
         """"""
         n = QtWidgets.QMessageBox.warning(
@@ -395,7 +395,7 @@ class ManagerWidget(QtWidgets.QWidget):
 
     def download_data(self) -> None:
         """"""
-        dialog = DownloadDialog2(self.engine)
+        dialog = SelectDialog(self.engine)
         dialog.exec_()
 
     def show(self) -> None:
@@ -613,24 +613,25 @@ class DownloadDialog(QtWidgets.QDialog):
 class DownloadDialog2(QtWidgets.QDialog):
     """"""
 
-    def __init__(self, engine: ManagerEngine, parent=None):
+    def __init__(self, engine: ManagerEngine, parent=None, contract_description=None):
         """"""
         super().__init__()
 
         self.engine = engine
+        self.contract_description = contract_description
 
         self.setWindowTitle("下载历史数据V2")
-        self.setFixedWidth(300)
+        self.setFixedWidth(900)
 
         self.setWindowFlags(
             (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
             & ~QtCore.Qt.WindowMaximizeButtonHint)
 
-        self.symbol_edit = QtWidgets.QLineEdit()
-
-        # self.exchange_combo = QtWidgets.QComboBox()
-        # for i in Exchange:
-        #     self.exchange_combo.addItem(str(i.name), i)
+        info_text = "代码:%s， 合约ID:%d， 类型:%s， 交易所:%s， 货币类型:%s" % \
+                    (contract_description.contract.symbol, contract_description.contract.conId,
+                     contract_description.contract.secType, contract_description.contract.primaryExchange,
+                     contract_description.contract.currency)
+        self.info_label = QtWidgets.QLabel(info_text)
 
         self.interval_combo = QtWidgets.QComboBox()
         for i in Interval:
@@ -656,17 +657,11 @@ class DownloadDialog2(QtWidgets.QDialog):
             )
         )
 
-        button_select = QtWidgets.QPushButton("搜索合约")
-        button_select.clicked.connect(self.select_dialog)
-
         button = QtWidgets.QPushButton("下载")
         button.clicked.connect(self.download)
 
         form = QtWidgets.QFormLayout()
-
-        form.addRow("代码", self.symbol_edit)
-        form.addRow(button_select)
-
+        form.addRow("合约", self.info_label)
         form.addRow("周期", self.interval_combo)
         form.addRow("开始日期", self.start_date_edit)
         form.addRow("结束日期", self.end_date_edit)
@@ -676,7 +671,7 @@ class DownloadDialog2(QtWidgets.QDialog):
 
     def download(self):
         """"""
-        symbol = self.symbol_edit.text()
+        symbol = self.contract_description.contract.conId
         exchange = Exchange(self.exchange_combo.currentData())
         interval = Interval(self.interval_combo.currentData())
 
@@ -690,25 +685,11 @@ class DownloadDialog2(QtWidgets.QDialog):
             count = self.engine.download_bar_data(symbol, exchange, interval, start)
         QtWidgets.QMessageBox.information(self, "下载结束", f"下载总数据量：{count}条")
 
-    def select_dialog(self) -> None:
-        """"""
-        symbol = self.symbol_edit.text()
-        if symbol == "":
-            QtWidgets.QMessageBox.information(self, "提示", "代码不能为空")
-            return
-
-        dialog = SelectDialog(self.engine, parent=self, symbol=symbol)
-        dialog.exec_()
-
-    def select_contract(self, item) -> None:
-        """"""
-        print("item=", item.text())
-
 
 class SelectDialog(QtWidgets.QDialog):
     """"""
 
-    def __init__(self, engine: ManagerEngine, parent=None, symbol=""):
+    def __init__(self, engine: ManagerEngine, parent=None):
         """"""
         super().__init__()
 
@@ -721,19 +702,60 @@ class SelectDialog(QtWidgets.QDialog):
             (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
             & ~QtCore.Qt.WindowMaximizeButtonHint)
 
+        self.contract_description = None
+
+        self.symbol_line = QtWidgets.QLineEdit()
+        search_button = QtWidgets.QPushButton("查询")
+        search_button.clicked.connect(self.search_symbol)
+
+        grid = QtWidgets.QGridLayout()
+        grid.addWidget(QtWidgets.QLabel("代码"), 0, 0)
+        grid.addWidget(self.symbol_line, 0, 2)
+        grid.addWidget(search_button, 0, 3)
+
+        # ----------------------------------------------------------
         self.list_widget = QtWidgets.QListWidget()
+        self.list_widget.itemClicked.connect(self.select_contract)
 
-        match_contracts = engine.datafeed.match_symbol(symbol)
-        for mc in match_contracts:
-            self.list_widget.addItem(mc)
-
-        self.list_widget.itemClicked.connect(parent.select_contract)
-
-        button = QtWidgets.QPushButton("选择")
-        button.clicked.connect(self.close)
+        button = QtWidgets.QPushButton("下载数据")
+        button.clicked.connect(self.download_data)
 
         form = QtWidgets.QFormLayout()
         form.addRow(self.list_widget)
         form.addRow(button)
 
-        self.setLayout(form)
+        # Overall layout
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addLayout(grid)
+        vbox.addLayout(form)
+        self.setLayout(vbox)
+
+    def search_symbol(self) -> None:
+        """"""
+        symbol = self.symbol_line.text()
+        if len(symbol) <= 0:
+            QtWidgets.QMessageBox.information(self, "提示", "请输入代码")
+            return
+
+        match_contract_descriptions = self.engine.datafeed.match_symbol(symbol)
+        for mcd in match_contract_descriptions:
+            item = QtWidgets.QListWidgetItem()
+            text = "代码:%s， 合约ID:%d， 类型:%s， 交易所:%s， 货币类型:%s" % \
+                   (mcd.contract.symbol, mcd.contract.conId, mcd.contract.secType, mcd.contract.primaryExchange,
+                    mcd.contract.currency)
+            item.setText(text)
+            item.setData(1, mcd)
+            self.list_widget.addItem(item)
+
+    def select_contract(self, item) -> None:
+        """"""
+        self.contract_description = item.data(1)
+
+    def download_data(self) -> None:
+        """"""
+        if self.contract_description is None:
+            QtWidgets.QMessageBox.information(self, "提示", "请选择合约")
+            return
+
+        dialog = DownloadDialog2(self.engine, self, self.contract_description)
+        dialog.exec_()

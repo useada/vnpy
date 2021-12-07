@@ -220,13 +220,11 @@ class IbDatafeed(BaseDatafeed):
 
         return data
 
-    def match_symbol(self, symbol) -> Optional[List[str]]:
+    def match_symbol(self, symbol) -> Optional[List[ContractDescription]]:
         if not self.inited:
             self.init()
-
         matches = self.ib.reqMatchingSymbols(symbol)
-        match_contracts = [str(m.contract) for m in matches]
-        return match_contracts
+        return matches
 
 
 if __name__ == '__main__':

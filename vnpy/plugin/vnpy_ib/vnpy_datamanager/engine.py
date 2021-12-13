@@ -28,6 +28,9 @@ class ManagerEngine(BaseEngine):
         self.database: BaseDatabase = get_database()
         self.datafeed: BaseDatafeed = get_datafeed()
 
+    def set_settings(self, ip, port, client_id):
+        self.datafeed.set_settings(ip, port, client_id)
+
     def import_data_from_csv(
         self,
         file_path: str,
@@ -184,42 +187,46 @@ class ManagerEngine(BaseEngine):
     def download_bar_data(
         self,
         symbol: str,
+        con_id: str,  # 合约ID
         exchange: Exchange,
         interval: str,
-        start: datetime
+        start: datetime,
+        end: datetime
     ) -> int:
         """
         Query bar data from datafeed.
         """
         req = HistoryRequest(
             symbol=symbol,
+            con_id=con_id,
             exchange=exchange,
             interval=Interval(interval),
             start=start,
-            end=datetime.now(DB_TZ)
+            end=end
         )
 
-        vt_symbol = f"{symbol}.{exchange.value}"
-        contract = self.main_engine.get_contract(vt_symbol)
+        # vt_symbol = f"{symbol}.{exchange.value}"
+        # contract = self.main_engine.get_contract(vt_symbol)
 
         # If history data provided in gateway, then query
-        if contract and contract.history_data:
-            data = self.main_engine.query_history(
-                req, contract.gateway_name
-            )
+        # if contract and contract.history_data:
+        #     data = self.main_engine.query_history(
+        #         req, contract.gateway_name
+        #     )
         # Otherwise use datafeed to query data
-        else:
-            data = self.datafeed.query_bar_history(req)
+        # else:
+        data = self.datafeed.query_bar_history(req)
 
         if data:
             self.database.save_bar_data(data)
-            return(len(data))
+            return len(data)
 
         return 0
 
     def download_tick_data(
         self,
         symbol: str,
+        con_id: str,  # 合约ID
         exchange: Exchange,
         start: datetime
     ) -> int:

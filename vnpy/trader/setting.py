@@ -28,6 +28,9 @@ SETTINGS: Dict[str, Any] = {
     "datafeed.name": "ib",
     "datafeed.username": "",
     "datafeed.password": "",
+    "datafeed.host": "localhost",
+    "datafeed.port": 7496,
+    "datafeed.client_id": 2,
 
     "database.timezone": get_localzone().zone,
     "database.name": "sqlite",

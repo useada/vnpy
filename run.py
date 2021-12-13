@@ -1,4 +1,4 @@
-import vnpy
+# import vnpy
 from vnpy.event import EventEngine
 from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import MainWindow, create_qapp
@@ -6,7 +6,7 @@ from vnpy.trader.ui import MainWindow, create_qapp
 # from vnpy_ctptest import CtptestGateway
 # from vnpy.gateway.ib import IbGateway
 # from vnpy.app.paper_account import PaperAccountApp
-# from vnpy.app.cta_strategy import CtaStrategyApp
+from vnpy.app.cta_strategy import CtaStrategyApp
 # from vnpy.app.cta_backtester import CtaBacktesterApp
 # from vnpy.app.data_manager import DataManagerApp
 
@@ -16,8 +16,12 @@ path = os.path.dirname(__file__)
 path = os.path.join(path, "vnpy", "plugin")
 sys.path.insert(0, path)
 
-from vnpy_ib import IbGateway
-from vnpy_ib import DataManagerApp
+from vnpy.plugin.vnpy_ib import IbGateway
+from vnpy.plugin.vnpy_ib import DataManagerApp
+from vnpy.plugin.vnpy_ctabacktester import CtaBacktesterApp
+# from vnpy_ib import IbGateway
+# from vnpy_ib import DataManagerApp
+# from vnpy_ctabacktester import CtaBacktesterApp
 
 def main():
     """Start VN Trader"""
@@ -31,14 +35,15 @@ def main():
     main_engine.add_gateway(IbGateway)
 
     # main_engine.add_app(PaperAccountApp)
-    # main_engine.add_app(CtaStrategyApp)
-    # main_engine.add_app(CtaBacktesterApp)
+    main_engine.add_app(CtaStrategyApp)
+    main_engine.add_app(CtaBacktesterApp)
     main_engine.add_app(DataManagerApp)
 
     main_window = MainWindow(main_engine, event_engine)
     main_window.showMaximized()
 
     qapp.exec()
+
 
 if __name__ == "__main__":
     main()

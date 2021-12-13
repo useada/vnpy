@@ -115,54 +115,85 @@ class IbDatafeed(BaseDatafeed):
         """"""
         self.username: str = SETTINGS["datafeed.username"]
         self.password: str = SETTINGS["datafeed.password"]
+        self.ip = SETTINGS["datafeed.host"]
+        self.port = SETTINGS["datafeed.port"]
+        self.client_id = SETTINGS["datafeed.client_id"]
 
-        self.ib = IB()
+        self.ib = None
         self.inited: bool = False
+
+    def set_settings(self, ip, port, client_id):
+        self.ip = ip
+        self.port = port
+        self.client_id = client_id
 
     def init(self) -> bool:
         """初始化"""
         if self.inited:
             return True
 
-        self.ib.connect('127.0.0.1', 7496, clientId=1)
+        self.ib = IB()
+        self.ib.connect(self.ip, self.port, clientId=self.client_id)
 
         self.inited = True
         return True
+
+    # def download_tick_data(
+    #     self,
+    #     symbol: str,
+    #     con_id: str,  # 合约ID
+    #     exchange: Exchange,
+    #     number: int,
+    #     start: datetime,
+    #     end: datetime
+    # ) -> int:
+    #     if not self.inited:
+    #         self.init()
+    #
+    #     if not self.inited:
+    #         print("ib not inited")
+    #         return None
 
     def query_bar_history(self, req: HistoryRequest) -> Optional[List[BarData]]:
         """查询k线数据"""
         if not self.inited:
             self.init()
-
-        symbol = req.symbol
-        exchange = EXCHANGE_VT2IB.get(req.exchange)
-        if not exchange:
+            
+        if not self.inited:
+            print("ib not inited")
             return None
+        
+        symbol = req.symbol
+        conId = req.con_id
+
         adjustment = INTERVAL_ADJUSTMENT_MAP[req.interval]
         interval = INTERVAL_VT2IB.get(req.interval)
         if not interval:
             return None
 
-        # start = req.start.strftime("%Y%m%d")
-        # end = req.end.strftime("%Y%m%d")
         start = req.start
         end = req.end
+        days = end.__sub__(start).days
+        if days <= 0:
+            days = 1
+        duration_str = "%d D" % days
 
         if req.exchange == Exchange.IDEALPRO:
             bar_type: str = "MIDPOINT"
         else:
             bar_type: str = "TRADES"
 
-        contract = Stock(symbol=symbol, exchange=exchange, currency="USD")
-        # contract = Stock('AMD', 'SMART', 'USD')
-        # contract = Forex('EURUSD')
+        contract = Contract(conId=conId)
+        self.ib.qualifyContracts(contract)
+
         bars = self.ib.reqHistoricalData(
-            contract, endDateTime=end, durationStr='30 D',
+            contract, endDateTime=end, durationStr=duration_str,
             barSizeSetting=interval, whatToShow=bar_type, useRTH=True)
 
         # convert to pandas dataframe:
         df = util.df(bars)
-        print(df)
+        if df is None:
+            return None
 
         bar_keys: List[_datetime] = []
         bar_dict: Dict[_datetime, BarData] = {}
@@ -171,35 +202,21 @@ class IbDatafeed(BaseDatafeed):
         # 处理原始数据中的NaN值
         df.fillna(0, inplace=True)
 
+        vnpy_symbol = contract.symbol + "-" + contract.currency + "-" + contract.secType
         if df is not None:
             for ix, row in df.iterrows():
                 if row["open"] is None:
                     continue
 
-                # if interval.value == "d":
-                #     dt = row["trade_date"]
-                #     dt = datetime.strptime(dt, "%Y%m%d")
-                # else:
-                #     dt = row["trade_time"]
-                #     dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") - adjustment
-
                 date = row["date"]
-                # if len(date) > 8:
-                #     dt: datetime = datetime.strptime(date, "%Y%m%d %H:%M:%S")
-                # else:
-                #     dt: datetime = datetime.strptime(date, "%Y%m%d")
                 if type(date) == _date:
                     dt = _datetime.combine(date=date, time=_time.min)
-                    # s=date.strftime('%Y/%m/%d')
-                    # # dt = _datetime.strptime('2017/02/04 20:49', '%Y/%m/%d %H:%M')
-                    # dt = _datetime.strptime(s, '%Y/%m/%d')
                 else:
-                    # dt: _datetime = CHINA_TZ.localize(date)
                     local_tz: BaseTzInfo = get_localzone()
                     dt: _datetime = self.local_tz.localize(date)
 
                 bar: BarData = BarData(
-                    symbol=req.symbol,
+                    symbol=vnpy_symbol,
                     exchange=req.exchange,
                     interval=req.interval,
                     datetime=dt,
@@ -210,7 +227,6 @@ class IbDatafeed(BaseDatafeed):
                     volume=row["volume"],
                     gateway_name="IB"
                 )
-
                 bar_dict[dt] = bar
 
         bar_keys = bar_dict.keys()
@@ -220,11 +236,14 @@ class IbDatafeed(BaseDatafeed):
 
         return data
 
-    def match_symbol(self, symbol) -> Optional[List[ContractDescription]]:
+    def match_symbol(self, symbol) -> Optional[List[Contract]]:
         if not self.inited:
             self.init()
-        matches = self.ib.reqMatchingSymbols(symbol)
-        return matches
+        match_descriptions = self.ib.reqMatchingSymbols(symbol)
+        contracts = [m.contract for m in match_descriptions
+                     if m.contract.symbol == symbol and m.contract.currency in ["USD", "HKD"]]
+        self.ib.qualifyContracts(*contracts)
+        return contracts
 
 
 if __name__ == '__main__':

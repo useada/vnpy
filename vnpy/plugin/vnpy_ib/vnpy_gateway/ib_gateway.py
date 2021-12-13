@@ -813,6 +813,13 @@ class IbApi(EWrapper):
         f.close()
 
 
+# 合约类型	代码规则	                           代码（symbol）	                     交易所（exchange）
+# 股票	    名称-货币-类别	                   SPY-USD-STK	                         SMART
+# 外汇	    名称-货币-类别	                   EUR-USD-CASH	                         IDEALPRO
+# 贵金属	    名称-货币-类别	                   XAUUSD-USD-CMDTY	                     SMART
+# 期货	    名称-到期年月-货币-类别	           ES-202002-USD-FUT	                 GLOBEX
+# 期货（指定乘数）	名称-到期年月-合约乘数-类别   SI-202006-1000-USD-FUT	             NYMEX
+# 期货期权	        名称-到期年月-期权类型-行权价-合约乘数-货币-类别	ES-2020006-C-2430-50-USD-FOP	GLOBEX
 def generate_ib_contract(symbol: str, exchange: Exchange) -> Optional[Contract]:
     """生产IB合约"""
     try:

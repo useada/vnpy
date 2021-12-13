@@ -370,6 +370,7 @@ class HistoryRequest:
     """
 
     symbol: str
+    con_id: str
     exchange: Exchange
     start: datetime
     end: datetime = None

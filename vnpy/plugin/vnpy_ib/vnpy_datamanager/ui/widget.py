@@ -23,6 +23,10 @@ class ManagerWidget(QtWidgets.QWidget):
 
         self.tree_items: Dict[Tuple, QtWidgets.QTreeWidgetItem] = {}
 
+        self.ip = ""
+        self.port = 0
+        self.client_id = 1
+
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -36,6 +40,9 @@ class ManagerWidget(QtWidgets.QWidget):
         refresh_button = QtWidgets.QPushButton("刷新")
         refresh_button.clicked.connect(self.refresh_tree)
 
+        settings_button = QtWidgets.QPushButton("盈透设置")
+        settings_button.clicked.connect(self.set_settings)
+
         import_button = QtWidgets.QPushButton("导入数据")
         import_button.clicked.connect(self.import_data)
 
@@ -48,11 +55,13 @@ class ManagerWidget(QtWidgets.QWidget):
         hbox1 = QtWidgets.QHBoxLayout()
         hbox1.addWidget(refresh_button)
         hbox1.addStretch()
+        hbox1.addWidget(settings_button)
         hbox1.addWidget(import_button)
         hbox1.addWidget(update_button)
         hbox1.addWidget(download_button)
 
-        hbox2 = QtWidgets.QHBoxLayout()
+        # hbox2 = QtWidgets.QHBoxLayout()
+        hbox2 = QtWidgets.QVBoxLayout()
         hbox2.addWidget(self.tree)
         hbox2.addWidget(self.table)
 
@@ -200,6 +209,17 @@ class ManagerWidget(QtWidgets.QWidget):
         self.minute_child.setExpanded(True)
         self.hour_child.setExpanded(True)
         self.daily_child.setExpanded(True)
+
+    def set_settings(self) -> None:
+        dialog = IBSettingsDialog(self.engine)
+        n = dialog.exec_()
+        if n != dialog.Accepted:
+            return
+
+        self.ip = dialog.ip_edit.text()
+        self.port = int(dialog.port_edit.text())
+        self.client_id = int(dialog.client_id_edit.text())
+        self.engine.datafeed.set_settings(self.ip, self.port, self.client_id)
 
     def import_data(self) -> None:
         """"""
@@ -613,12 +633,12 @@ class DownloadDialog(QtWidgets.QDialog):
 class DownloadDialog2(QtWidgets.QDialog):
     """"""
 
-    def __init__(self, engine: ManagerEngine, parent=None, contract_description=None):
+    def __init__(self, engine: ManagerEngine, parent=None, contract=None):
         """"""
         super().__init__()
 
         self.engine = engine
-        self.contract_description = contract_description
+        self.contract = contract
 
         self.setWindowTitle("下载历史数据V2")
         self.setFixedWidth(900)
@@ -628,9 +648,9 @@ class DownloadDialog2(QtWidgets.QDialog):
             & ~QtCore.Qt.WindowMaximizeButtonHint)
 
         info_text = "代码:%s， 合约ID:%d， 类型:%s， 交易所:%s， 货币类型:%s" % \
-                    (contract_description.contract.symbol, contract_description.contract.conId,
-                     contract_description.contract.secType, contract_description.contract.primaryExchange,
-                     contract_description.contract.currency)
+                    (self.contract.symbol, self.contract.conId,
+                     self.contract.secType, self.contract.exchange,
+                     self.contract.currency)
         self.info_label = QtWidgets.QLabel(info_text)
 
         self.interval_combo = QtWidgets.QComboBox()
@@ -671,18 +691,24 @@ class DownloadDialog2(QtWidgets.QDialog):
 
     def download(self):
         """"""
-        symbol = self.contract_description.contract.conId
-        exchange = Exchange(self.exchange_combo.currentData())
+        symbol = self.contract.symbol
+        conId = self.contract.conId
+        exchange = Exchange(self.contract.exchange)
         interval = Interval(self.interval_combo.currentData())
 
         start_date = self.start_date_edit.date()
         start = datetime(start_date.year(), start_date.month(), start_date.day())
         start = DB_TZ.localize(start)
 
+        end_date = self.end_date_edit.date()
+        end = datetime(end_date.year(), end_date.month(), end_date.day())
+        end = DB_TZ.localize(end)
+
         if interval == Interval.TICK:
-            count = self.engine.download_tick_data(symbol, exchange, start)
+            # count = self.engine.download_tick_data(symbol, exchange, start)
+            pass
         else:
-            count = self.engine.download_bar_data(symbol, exchange, interval, start)
+            count = self.engine.download_bar_data(symbol, conId, exchange, interval, start, end)
         QtWidgets.QMessageBox.information(self, "下载结束", f"下载总数据量：{count}条")
 
 
@@ -702,7 +728,7 @@ class SelectDialog(QtWidgets.QDialog):
             (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
             & ~QtCore.Qt.WindowMaximizeButtonHint)
 
-        self.contract_description = None
+        self.contract = None
 
         self.symbol_line = QtWidgets.QLineEdit()
         search_button = QtWidgets.QPushButton("查询")
@@ -737,25 +763,61 @@ class SelectDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.information(self, "提示", "请输入代码")
             return
 
-        match_contract_descriptions = self.engine.datafeed.match_symbol(symbol)
-        for mcd in match_contract_descriptions:
+        match_contracts = self.engine.datafeed.match_symbol(symbol)
+        for contract in match_contracts:
             item = QtWidgets.QListWidgetItem()
             text = "代码:%s， 合约ID:%d， 类型:%s， 交易所:%s， 货币类型:%s" % \
-                   (mcd.contract.symbol, mcd.contract.conId, mcd.contract.secType, mcd.contract.primaryExchange,
-                    mcd.contract.currency)
+                   (contract.symbol, contract.conId, contract.secType, contract.exchange, contract.currency)
             item.setText(text)
-            item.setData(1, mcd)
+            item.setData(1, contract)
             self.list_widget.addItem(item)
 
     def select_contract(self, item) -> None:
         """"""
-        self.contract_description = item.data(1)
+        self.contract = item.data(1)
 
     def download_data(self) -> None:
         """"""
-        if self.contract_description is None:
+        if self.contract is None:
             QtWidgets.QMessageBox.information(self, "提示", "请选择合约")
             return
 
-        dialog = DownloadDialog2(self.engine, self, self.contract_description)
+        dialog = DownloadDialog2(self.engine, self, self.contract)
         dialog.exec_()
+
+
+class IBSettingsDialog(QtWidgets.QDialog):
+    def __init__(self, engine: ManagerEngine, parent=None):
+        """"""
+        super().__init__()
+
+        self.engine = engine
+
+        self.setWindowTitle("IB 链接设置")
+        self.setFixedWidth(300)
+
+        self.setWindowFlags(
+            (self.windowFlags() | QtCore.Qt.CustomizeWindowHint)
+            & ~QtCore.Qt.WindowMaximizeButtonHint)
+
+        self.ip_edit = QtWidgets.QLineEdit()
+        self.port_edit = QtWidgets.QLineEdit()
+        self.client_id_edit = QtWidgets.QLineEdit()
+
+        self.ip_edit.setText("127.0.0.1")
+        self.port_edit.setText("4396")
+        self.client_id_edit.setText("2")
+
+        button = QtWidgets.QPushButton("设置")
+        button.clicked.connect(self.save_settings)
+
+        form = QtWidgets.QFormLayout()
+        form.addRow("盈透 IP", self.ip_edit)
+        form.addRow("端   口", self.port_edit)
+        form.addRow("客户端ID", self.client_id_edit)
+        form.addRow(button)
+        self.setLayout(form)
+
+    def save_settings(self):
+        self.accepted()
+        self.close()

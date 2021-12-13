@@ -95,6 +95,7 @@ class Exchange(Enum):
     SMART = "SMART"         # Smart Router for US stocks
     NYSE = "NYSE"           # New York Stock Exchnage
     NASDAQ = "NASDAQ"       # Nasdaq Exchange
+    NASDAQNMS = "NASDAQ.NMS"       # Nasdaq Exchange
     ARCA = "ARCA"           # ARCA Exchange
     EDGEA = "EDGEA"         # Direct Edge Exchange
     ISLAND = "ISLAND"       # Nasdaq Island ECN

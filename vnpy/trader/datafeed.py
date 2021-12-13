@@ -44,6 +44,8 @@ def get_datafeed() -> BaseDatafeed:
     datafeed_name: str = SETTINGS["datafeed.name"]
     module_name: str = f"vnpy_{datafeed_name}"
 
+    if datafeed_name == "ib":
+        module_name: str = "vnpy.plugin.vnpy_ib"
 
     # Try to import datafeed module
     try:

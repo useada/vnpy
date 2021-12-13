@@ -20,28 +20,30 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+
 from pathlib import Path
 
 import importlib_metadata
 from vnpy.trader.app import BaseApp
 
-from .engine import APP_NAME, ManagerEngine
-import os
+from .engine import BacktesterEngine, APP_NAME
 
 
 try:
-    __version__ = importlib_metadata.version("vnpy_datamanager")
+    __version__ = importlib_metadata.version("vnpy_ctabacktester")
 except importlib_metadata.PackageNotFoundError:
     __version__ = "dev"
 
+import os
 
-class DataManagerApp(BaseApp):
+class CtaBacktesterApp(BaseApp):
     """"""
 
     app_name = APP_NAME
     app_module = __module__
+    # app_path = Path(__file__).parent
     app_path = Path(os.path.abspath(__file__)).parent
-    display_name = "数据管理"
-    engine_class = ManagerEngine
-    widget_name = "ManagerWidget"
-    icon_name = "manager.ico"
+    display_name = "CTA回测"
+    engine_class = BacktesterEngine
+    widget_name = "BacktesterManager"
+    icon_name = "backtester.ico"

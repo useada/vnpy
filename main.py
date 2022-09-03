@@ -3,6 +3,7 @@ from vnpy.trader.engine import MainEngine
 from vnpy.trader.ui import MainWindow, create_qapp
 
 # from vnpy_ctp import CtpGateway
+from vnpy_hlb import HlbGateway
 from vnpy_ctastrategy import CtaStrategyApp
 from vnpy_ctabacktester import CtaBacktesterApp
 
@@ -15,6 +16,7 @@ def main():
     main_engine = MainEngine(event_engine)
     
     # main_engine.add_gateway(CtpGateway)
+    main_engine.add_gateway(HlbGateway)
     main_engine.add_app(CtaStrategyApp)
     main_engine.add_app(CtaBacktesterApp)
 

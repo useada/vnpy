@@ -7,6 +7,18 @@ from vnpy_hlb import HlbGateway
 from vnpy_ctastrategy import CtaStrategyApp
 from vnpy_ctabacktester import CtaBacktesterApp
 
+# from vnpy_spreadtrading import SpreadTradingApp
+# from vnpy_portfoliostrategy import PortfolioStrategyApp
+from vnpy_scripttrader import ScriptTraderApp
+# from vnpy_paperaccount import PaperAccountApp
+from vnpy_datarecorder import DataRecorderApp
+from vnpy_datamanager import DataManagerApp
+from vnpy_riskmanager import RiskManagerApp
+from vnpy_rpcservice import RpcServiceApp
+from vnpy_chartwizard import ChartWizardApp
+# from vnpy_portfoliomanager import PortfolioManagerApp
+# from vnpy_webtrader import WebTraderApp
+
 
 def main():
     """Start VeighNa Trader"""
@@ -19,6 +31,18 @@ def main():
     main_engine.add_gateway(HlbGateway)
     main_engine.add_app(CtaStrategyApp)
     main_engine.add_app(CtaBacktesterApp)
+
+    # main_engine.add_app(SpreadTradingApp)
+    # main_engine.add_app(PortfolioStrategyApp)
+    main_engine.add_app(ScriptTraderApp)
+    # main_engine.add_app(PaperAccountApp)
+    main_engine.add_app(DataRecorderApp)
+    main_engine.add_app(DataManagerApp)
+    main_engine.add_app(RiskManagerApp)
+    main_engine.add_app(RpcServiceApp)
+    main_engine.add_app(ChartWizardApp)
+    # main_engine.add_app(PortfolioManagerApp)
+    # main_engine.add_app(WebTraderApp)
 
     main_window = MainWindow(main_engine, event_engine)
     main_window.showMaximized()
